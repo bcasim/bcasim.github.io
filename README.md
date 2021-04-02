@@ -1,5 +1,5 @@
-# This is a BCASim homepage script
+# This is a BCASim homepage
 
 Access to
 
-https://resoto.github.io
+https://bcasim.github.io
