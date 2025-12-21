@@ -1,0 +1,6 @@
+node0: 500
+node1: 500
+node2: 0
+node3: 0
+node4: 0
+合計: 1000
