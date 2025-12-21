@@ -24,6 +24,10 @@ var options_block = {
             //direction: "LR",
             sortMethod: "directed",
         }
+    },
+    interaction: {
+        navigationButtons: true,
+        keyboard: true
     }
 };
 
@@ -32,27 +36,28 @@ var b_color = [];
 var blockchian = new vis.Network(container_block, data_block, options_block);
 
 /*チェーンに次のブロックを追加して表示する*/
-function next_block(){
-    if(block_index==0){
-        nodes_block.add({id: 0, label: 0+"\ngenesis",group:0});
+function next_block() {
+    if (block_index == 0) {
+        nodes_block.add({ id: 0, label: 0 + "\ngenesis", group: 0 });
         block_list_hash.push(blockchain_data[0].hash);
         block_index++;
+        blockchian.fit();
         return;
     }
 
-    for(i=0;i<block_list_hash.length;i++){
-        if(blockchain_data[block_index].previousHash==block_list_hash[i]){
+    for (i = 0; i < block_list_hash.length; i++) {
+        if (blockchain_data[block_index].previousHash == block_list_hash[i]) {
             block_list_hash.push(blockchain_data[block_index].hash);
             _miner = blockchain_data[block_index].miner;
             _height = blockchain_data[block_index].height;
-            
-            if(document.getElementById("node").node.value == "1"){
-                nodes_block.add({id: block_index, label: _height+"\nnode"+_miner, group: block_index+1});
-            }else if(document.getElementById("node").node.value == "2"){
-                nodes_block.add({id: block_index, label: _height+"\nnode"+_miner, group: _miner});
+
+            if (document.getElementById("node").node.value == "1") {
+                nodes_block.add({ id: block_index, label: _height + "\nnode" + _miner, group: block_index + 1 });
+            } else if (document.getElementById("node").node.value == "2") {
+                nodes_block.add({ id: block_index, label: _height + "\nnode" + _miner, group: _miner });
             }
 
-            edges_block.add({from: i, to: block_index, arrows: "to",width: 3});
+            edges_block.add({ from: i, to: block_index, arrows: "to", width: 3 });
             block_index++;
             break;
         }
