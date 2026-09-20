@@ -25,7 +25,7 @@ its JSON and CSV sample data.
 - `network-static.png`: still frame from the existing `network.gif`; used on the
   homepage to avoid downloading and autoplaying the full recording.
 - `demo/index.html` / `demo/css/style.css`: playback controls and graph layout.
-- `demo/js/`: sample loading, playback, and visualization logic.
+- `demo/js/`: vendored canonical dataset loader, playback engine, graph renderers, and DOM controller.
 - `demo/js/dist/vis.js`: existing bundled graph library.
 - `demo/output-file/`: recorded simulation data, not a live simulation engine.
 
@@ -44,6 +44,25 @@ vertically. The controls have keyboard focus indicators and the status message
 announces loading, playback state, and errors. Text below each graph explains
 its visual encoding. The recorded animation remains available from the homepage
 and demo footer.
+
+## Updating the shared runtime
+
+The canonical source is the separate `bcasim-visualization` repository. Change
+its `js/` runtime or tests, then copy the exact files with:
+
+```sh
+cd ../bcasim-visualization
+node scripts/sync-demo.cjs ../bcasim.github.io
+node scripts/sync-demo.cjs ../bcasim.github.io --check
+```
+
+The script vendors runtime files (including the graph library), shared regression
+tests, and a deterministic `demo/runtime-manifest.json`. It leaves website HTML,
+styles, analytics, and recordings untouched. Each repository serves and runs its
+tests independently; no runtime link to a sibling checkout is required. Run tests
+in both repositories after sync and commit the paired changes. Direct edits to
+vendored code fail the manifest check. If a new script is added, update both entry
+points and the explicit sync file list in the canonical repository.
 
 ## Validation
 

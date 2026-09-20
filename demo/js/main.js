@@ -1,225 +1,133 @@
-/* Playback has exactly one clock and one traffic timer. */
-var time = 0;
-var simulation_speed = 10;
-var simulation_color_mode = "1";
-var simulation_duration = 0;
-var simulation_state = "loading";
-var clock_timer = null;
-var traffic_timer = null;
-var initialization = null;
-var controls_bound = false;
-
-function set_status(message, invalid) {
-    var status = document.getElementById("status_message");
-    status.textContent = message;
-    status.dataset.state = invalid ? "error" : simulation_state;
-}
-
-function update_controls() {
-    var loading = simulation_state === "loading";
-    var error = simulation_state === "error";
-    var startButton = document.getElementById("start_button");
-    var pauseButton = document.getElementById("pause_button");
-    startButton.disabled = loading;
-    startButton.textContent = error ? "Retry loading" :
-        (simulation_state === "ready" || loading ? "Start simulation" : "Restart simulation");
-    pauseButton.disabled = simulation_state !== "running" && simulation_state !== "paused";
-    pauseButton.textContent = simulation_state === "paused" ? "Resume" : "Pause";
-    document.getElementById("reset_button").disabled = loading || error;
-    document.getElementById("speed").disabled = loading;
-    document.getElementById("start_point").disabled = loading;
-    document.querySelectorAll('#node input[name="node"]').forEach(function (input) {
-        input.disabled = loading;
-    });
-}
-
-function update_timestamp() {
-    document.getElementById("timestamp_area").textContent =
-        "Simulation time: " + time.toLocaleString(undefined, { maximumFractionDigits: 1 }) + " s / " +
-        simulation_duration.toLocaleString(undefined, { maximumFractionDigits: 1 }) + " s";
-}
-
-function stop_timers() {
-    if (clock_timer !== null) {
-        clearInterval(clock_timer);
-        clock_timer = null;
+/* DOM controller. Dataset, playback state, and graph rendering have separate owners. */
+(function (root) {
+    "use strict";
+    function Demo(document, window, fetchFile, vis, scheduler) {
+        this.document = document;
+        this.window = window;
+        this.fetchFile = fetchFile;
+        this.vis = vis;
+        this.scheduler = scheduler;
+        this.state = "loading";
+        this.initialization = null;
+        this.controlsBound = false;
+        this.data = null;
+        this.playback = null;
+        this.renderer = null;
     }
-    if (traffic_timer !== null) {
-        clearInterval(traffic_timer);
-        traffic_timer = null;
-    }
-}
-
-function start_timers() {
-    stop_timers();
-    clock_timer = setInterval(showClock, 500);
-    traffic_timer = setInterval(play_traffic, 100);
-}
-
-function process_to_time() {
-    while (block_index < blockchain_data.length && Number(blockchain_data[block_index].receiveTime) <= time) {
-        next_block();
-    }
-    while (event_id < event_data.length && Number(event_data[event_id].time) <= time) {
-        block_event();
-    }
-    update_timestamp();
-}
-
-function finish_if_complete() {
-    if (block_index < blockchain_data.length || event_id < event_data.length) {
-        return false;
-    }
-    stop_timers();
-    remove_traffic();
-    blockchain_network.fit({ animation: false });
-    simulation_state = "completed";
-    set_status("Playback complete. All " + blockchain_data.length + " blocks and " + event_data.length + " events have been shown.");
-    update_controls();
-    return true;
-}
-
-function showClock() {
-    if (simulation_state !== "running") {
-        return;
-    }
-    remove_traffic();
-    time = Math.min(simulation_duration, time + simulation_speed);
-    process_to_time();
-    finish_if_complete();
-}
-
-function main() {
-    reset_network();
-    reset_blockchain();
-}
-
-function read_settings() {
-    var speedInput = document.getElementById("speed");
-    var startInput = document.getElementById("start_point");
-    speedInput.removeAttribute("aria-invalid");
-    startInput.removeAttribute("aria-invalid");
-    var speed = Number(speedInput.value);
-    var startTime = Number(startInput.value);
-    if (!speedInput.value.trim() || !Number.isFinite(speed) || speed < 0.1 || speed > 10000) {
-        speedInput.setAttribute("aria-invalid", "true");
-        document.getElementById("setting_panel").open = true;
-        speedInput.focus();
-        set_status("Enter a speed from 0.1 to 10,000 seconds per step.", true);
-        return null;
-    }
-    if (!startInput.value.trim() || !Number.isFinite(startTime) || startTime < 0 || startTime > simulation_duration) {
-        startInput.setAttribute("aria-invalid", "true");
-        document.getElementById("setting_panel").open = true;
-        startInput.focus();
-        set_status("Enter a start time from 0 to " + simulation_duration + " seconds.", true);
-        return null;
-    }
-    var selectedColor = document.querySelector('#node input[name="node"]:checked');
-    return { speed: speed, time: startTime, color: selectedColor ? selectedColor.value : "1" };
-}
-
-function start_simulation() {
-    if (simulation_state === "error") {
-        return init();
-    }
-    if (simulation_state === "loading") {
-        return false;
-    }
-    var settings = read_settings();
-    if (!settings) {
-        return false;
-    }
-    stop_timers();
-    simulation_speed = settings.speed;
-    simulation_color_mode = settings.color;
-    time = settings.time;
-    main();
-    // Reconstruct state at the chosen time without animating the skipped traffic.
-    process_to_time();
-    remove_traffic();
-    blockchain_network.fit();
-    simulation_state = "running";
-    if (!finish_if_complete()) {
-        set_status("Playing. Settings take effect when you restart.");
-        update_controls();
-        start_timers();
-    }
-    return true;
-}
-
-function pause_simulation() {
-    if (simulation_state === "running") {
-        stop_timers();
-        simulation_state = "paused";
-        set_status("Paused. Resume to continue from the current time.");
-    } else if (simulation_state === "paused") {
-        simulation_state = "running";
-        set_status("Playing. Settings take effect when you restart.");
-        start_timers();
-    }
-    update_controls();
-}
-
-function reset_simulation() {
-    if (simulation_state === "loading" || simulation_state === "error") {
-        return;
-    }
-    stop_timers();
-    time = 0;
-    main();
-    process_to_time();
-    remove_traffic();
-    blockchain_network.fit();
-    simulation_state = "ready";
-    set_status("Ready. " + matrix_data.length + " nodes, " + blockchain_data.length + " blocks, " + event_data.length + " events loaded.");
-    update_controls();
-}
-
-function init() {
-    if (initialization) {
-        return initialization;
-    }
-    if (!controls_bound) {
-        document.getElementById("start_button").addEventListener("click", start_simulation);
-        document.getElementById("pause_button").addEventListener("click", pause_simulation);
-        document.getElementById("reset_button").addEventListener("click", reset_simulation);
-        window.addEventListener("pagehide", function () {
-            // The back/forward cache restores a resumable state with no stale timers.
-            if (simulation_state === "running") {
-                pause_simulation();
-            } else {
-                stop_timers();
-            }
-        });
-        controls_bound = true;
-    }
-    simulation_state = "loading";
-    stop_timers();
-    set_status("Loading simulation data…");
-    update_controls();
-    initialization = input_data().then(function () {
-        simulation_duration = Math.max(
-            blockchain_data.length ? Number(blockchain_data[blockchain_data.length - 1].receiveTime) : 0,
-            event_data.length ? Number(event_data[event_data.length - 1].time) : 0
-        );
-        document.getElementById("start_point").max = String(simulation_duration);
-        simulation_state = "ready";
-        reset_simulation();
+    Demo.prototype.element = function (id) { return this.document.getElementById(id); };
+    Demo.prototype.status = function (message, invalid) {
+        var status = this.element("status_message");
+        // Avoid repeating the same live-region announcement on every clock tick.
+        if (status.textContent !== message) status.textContent = message;
+        status.dataset.state = invalid ? "error" : this.state;
+    };
+    Demo.prototype.controls = function () {
+        var loading = this.state === "loading";
+        var error = this.state === "error";
+        this.element("start_button").disabled = loading;
+        this.element("start_button").textContent = error ? "Retry loading" :
+            (this.state === "ready" || loading ? "Start simulation" : "Restart simulation");
+        this.element("pause_button").disabled = this.state !== "running" && this.state !== "paused";
+        this.element("pause_button").textContent = this.state === "paused" ? "Resume" : "Pause";
+        this.element("reset_button").disabled = loading || error;
+        this.element("speed").disabled = loading;
+        this.element("start_point").disabled = loading;
+        this.document.querySelectorAll('#node input[name="node"]').forEach(function (input) { input.disabled = loading; });
+    };
+    Demo.prototype.changed = function (playback) {
+        this.state = playback.state;
+        this.element("timestamp_area").textContent = "Simulation time: " +
+            playback.time.toLocaleString(undefined, { maximumFractionDigits: 1 }) + " s / " +
+            this.data.duration.toLocaleString(undefined, { maximumFractionDigits: 1 }) + " s";
+        var messages = {
+            ready: "Ready. " + this.data.matrix.length + " nodes, " + this.data.blocks.length + " blocks, " + this.data.events.length + " events loaded.",
+            running: "Playing. Settings take effect when you restart.",
+            paused: "Paused. Resume to continue from the current time.",
+            completed: "Playback complete. All " + this.data.blocks.length + " blocks and " + this.data.events.length + " events have been shown."
+        };
+        this.status(messages[this.state]);
+        this.controls();
+    };
+    Demo.prototype.settings = function () {
+        var speedInput = this.element("speed");
+        var startInput = this.element("start_point");
+        speedInput.removeAttribute("aria-invalid");
+        startInput.removeAttribute("aria-invalid");
+        var speed = Number(speedInput.value);
+        var startTime = Number(startInput.value);
+        var invalid = null;
+        var message = "";
+        if (!speedInput.value.trim() || !Number.isFinite(speed) || speed < 0.1 || speed > 10000) {
+            invalid = speedInput;
+            message = "Enter a speed from 0.1 to 10,000 seconds per step.";
+        } else if (!startInput.value.trim() || !Number.isFinite(startTime) || startTime < 0 || startTime > this.data.duration) {
+            invalid = startInput;
+            message = "Enter a start time from 0 to " + this.data.duration + " seconds.";
+        }
+        if (invalid) {
+            invalid.setAttribute("aria-invalid", "true");
+            this.element("setting_panel").open = true;
+            invalid.focus();
+            this.status(message, true);
+            return null;
+        }
+        var selected = this.document.querySelector('#node input[name="node"]:checked');
+        return { speed: speed, time: startTime, color: selected ? selected.value : "1" };
+    };
+    Demo.prototype.start = function () {
+        if (this.state === "error") return this.init();
+        if (this.state === "loading") return false;
+        var settings = this.settings();
+        if (!settings) return false;
+        this.playback.start(settings);
         return true;
-    }).catch(function (error) {
-        simulation_state = "error";
-        set_status("Unable to load the demo. " + error.message + " Select Retry loading to try again.");
-        update_controls();
-        return false;
-    }).finally(function () {
-        initialization = null;
-    });
-    return initialization;
-}
-
-if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init, { once: true });
-} else {
-    init();
-}
+    };
+    Demo.prototype.pause = function () {
+        if (!this.playback) return;
+        if (this.playback.state === "paused") this.playback.resume();
+        else this.playback.pause();
+    };
+    Demo.prototype.reset = function () {
+        if (this.state !== "loading" && this.state !== "error") this.playback.reset();
+    };
+    Demo.prototype.init = function () {
+        if (this.initialization) return this.initialization;
+        if (this.data) return Promise.resolve(true);
+        var self = this;
+        if (!this.controlsBound) {
+            this.element("start_button").addEventListener("click", function () { self.start(); });
+            this.element("pause_button").addEventListener("click", function () { self.pause(); });
+            this.element("reset_button").addEventListener("click", function () { self.reset(); });
+            this.window.addEventListener("pagehide", function () {
+                // A restored back/forward cache entry remains paused and resumable.
+                if (self.playback) self.playback.pause();
+            });
+            this.controlsBound = true;
+        }
+        this.state = "loading";
+        this.status("Loading simulation data…");
+        this.controls();
+        this.initialization = root.BCASimData.load(this.fetchFile).then(function (data) {
+            self.data = data;
+            self.renderer = new root.BCASimRenderer(self.vis, self.element("network_panel"), self.element("blockchain_panel"));
+            self.playback = new root.BCASimPlayback(data, self.renderer, self.scheduler, function (playback) { self.changed(playback); });
+            self.element("start_point").max = String(data.duration);
+            self.playback.reset();
+            return true;
+        }).catch(function (error) {
+            if (self.playback) self.playback.dispose();
+            self.data = null;
+            self.playback = null;
+            self.state = "error";
+            self.status("Unable to load the simulation. " + error.message + " Select Retry loading to try again.");
+            self.controls();
+            return false;
+        }).finally(function () { self.initialization = null; });
+        return this.initialization;
+    };
+    root.BCASimDemo = Demo;
+    root.demo = new Demo(document, window, function (url) { return fetch(url); }, vis,
+        { setInterval: function (fn, delay) { return setInterval(fn, delay); }, clearInterval: function (id) { clearInterval(id); } });
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", function () { root.demo.init(); }, { once: true });
+    else root.demo.init();
+})(typeof globalThis !== "undefined" ? globalThis : this);

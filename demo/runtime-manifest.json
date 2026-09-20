@@ -1,0 +1,51 @@
+{
+  "format": 1,
+  "canonicalRepository": "bcasim-visualization",
+  "files": [
+    {
+      "source": "js/read-file.js",
+      "demo": "demo/js/read-file.js",
+      "sha256": "7d33ccc71387bbecb6e767c70018b89ede601beadf18aef893796b0afca0ccd2"
+    },
+    {
+      "source": "js/playback.js",
+      "demo": "demo/js/playback.js",
+      "sha256": "6bc05bebb172d26f1bd07086d84d77d30acecf3c6adcd0c4132ca0e0e9e72ce7"
+    },
+    {
+      "source": "js/blockchain.js",
+      "demo": "demo/js/blockchain.js",
+      "sha256": "a5d484bcfdb21e952cde4b37db9972baa46d05ed41213d2583f0aeae26149506"
+    },
+    {
+      "source": "js/network.js",
+      "demo": "demo/js/network.js",
+      "sha256": "0796703f269e3405486c1150b76e9a458931ae9551d6d218d681641a1c12b5d4"
+    },
+    {
+      "source": "js/main.js",
+      "demo": "demo/js/main.js",
+      "sha256": "99bfbfe9c596bc14acae0186dc0b54296f2c2d9e50b3cd4603ca850ca4c702e4"
+    },
+    {
+      "source": "js/dist/vis.js",
+      "demo": "demo/js/dist/vis.js",
+      "sha256": "974762d6a16050379586abcbce3bba324df6c2c3b4d333fc5de847b7b9e5db55"
+    },
+    {
+      "source": "tests/demo-runtime.test.cjs",
+      "demo": "tests/demo-runtime.test.cjs",
+      "sha256": "c8c9b3fa798cdab8f0ac524acd08eed18735eb32f66aac62e0f85831bc9fa10c"
+    },
+    {
+      "source": "tests/playback.test.cjs",
+      "demo": "tests/playback.test.cjs",
+      "sha256": "d86a1fd188dee262353b3a72c5c2c897f527b771e0ca388ccc3913eb224c0d88"
+    },
+    {
+      "source": "tests/runtime-sync.test.cjs",
+      "demo": "tests/runtime-sync.test.cjs",
+      "sha256": "f2c9d038e1223649578b2b4445bcd5e5cbb88614ecd927ccf0e27d2ac3fc8728"
+    }
+  ]
+}
