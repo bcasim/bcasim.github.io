@@ -35,10 +35,11 @@
             var group = mode === "1" ? 1 : index + 1;
             return { id: index, label: "node" + index, group: group, color: color(group) };
         }));
+        this.matrix = (data.initialMatrix || data.matrix).map(function (row) { return row.slice(); });
         var additions = [];
         for (var i = 0; i < data.matrix.length; i++) {
             for (var j = i; j < data.matrix.length; j++) {
-                if (data.matrix[i][j] === 1 || data.matrix[j][i] === 1) {
+                if (this.matrix[i][j] === 1 || this.matrix[j][i] === 1) {
                     additions.push({ id: edgeId(i, j), from: i, to: j, color: "#848484", width: 2 });
                 }
             }
@@ -56,6 +57,18 @@
     Renderer.prototype.block = function (block, index) { this.blockchain.add(block, index); };
     Renderer.prototype.fit = function () { this.blockchain.fit(); };
     Renderer.prototype.event = function (event) {
+        if (event.type === "NetworkChange") {
+            var source = Number(event.from), destination = Number(event.to);
+            this.matrix[source][destination] = event.action === "connect" ? 1 : 0;
+            var id = edgeId(source, destination);
+            if (this.matrix[source][destination] || this.matrix[destination][source]) {
+                if (!this.edges.get(id)) this.edges.add({ id: id, from: Math.min(source, destination), to: Math.max(source, destination), color: "#848484", width: 2 });
+            } else {
+                this.traffic.delete(id);
+                this.edges.remove(id);
+            }
+            return;
+        }
         if (event.type !== "FoundBlock" && event.type !== "ReceiveBlock") return;
         var node = Number(event.node);
         var from = Number(event.from);

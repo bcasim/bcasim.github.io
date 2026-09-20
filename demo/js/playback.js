@@ -86,6 +86,21 @@
         this.startTimers();
         this.onChange(this);
     };
+    Playback.prototype.seek = function (time) {
+        if (!Number.isFinite(time) || time < 0 || time > this.data.duration) throw new Error("Invalid seek time.");
+        this.reconstruct(time);
+        this.state = "paused";
+        this.finish();
+        this.onChange(this);
+    };
+    // Advance to the next timestamp, including all events at that timestamp in export order.
+    Playback.prototype.step = function (kind) {
+        if (kind !== "event" && kind !== "block") throw new Error("Step kind must be event or block.");
+        var rows = kind === "block" ? this.data.blocks : this.data.events;
+        var key = kind === "block" ? "receiveTime" : "time";
+        var next = rows.find(function (row) { return Number(row[key]) > this.time; }, this);
+        this.seek(next ? Number(next[key]) : this.data.duration);
+    };
     Playback.prototype.reset = function () {
         this.reconstruct(0);
         this.state = "ready";

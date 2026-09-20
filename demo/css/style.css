@@ -298,3 +298,29 @@ input[aria-invalid="true"] {
   border-color: #a62e25;
   background: #fff7f6;
 }
+
+/* Local import, inspection, and experiment configuration. */
+.experiment-panel { border: 1px solid var(--line); padding: 18px 22px; background: var(--surface); margin-block: 20px; }
+.experiment-panel > summary { cursor: pointer; font-weight: 600; }
+.experiment-panel p { font-size: 13px; }
+.import-grid, .inspector-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.drop-zone { border: 1px dashed var(--line); padding: 18px; min-width: 0; }
+.drop-zone[data-dragging="true"] { outline: 3px solid var(--focus); background: var(--paper); }
+.drop-zone label, .drop-zone label span { display: block; }
+.drop-zone label span { color: var(--muted); font-size: 12px; margin: 4px 0 12px; }
+.drop-zone input { width: 100%; max-width: 100%; font-size: 12px; }
+.timeline-controls { padding: 0 22px 20px; }
+.timeline-controls label, .timeline-controls small { display: block; font-size: 12px; }
+.timeline-controls input { width: 100%; accent-color: var(--accent); }
+.timeline-controls .playback-actions { margin: 10px 0; justify-content: flex-start; }
+.inspector-grid pre, #config_preview { max-height: 300px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; background: var(--paper); padding: 16px; }
+.table-scroll { overflow-x: auto; }
+.metrics-table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 12px; font-variant-numeric: tabular-nums; }
+.metrics-table th, .metrics-table td { text-align: right; border-bottom: 1px solid var(--line); padding: 10px; white-space: nowrap; }
+.metrics-table th:first-child { text-align: left; }
+.config-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin: 20px 0; }
+.config-grid input, .config-grid select { width: 100%; min-width: 0; padding: 9px; border: 1px solid var(--line); border-radius: 2px; background: var(--surface); color: var(--ink); font: inherit; }
+.command { overflow-x: auto; padding: 14px; background: var(--paper); font-size: 12px; }
+[hidden] { display: none !important; }
+@media (max-width: 800px) { .config-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) { .import-grid, .inspector-grid, .config-grid { grid-template-columns: minmax(0, 1fr); } .experiment-panel { padding: 16px; } }

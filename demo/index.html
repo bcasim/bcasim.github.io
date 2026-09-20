@@ -13,6 +13,7 @@
   <script defer src="./js/playback.js"></script>
   <script defer src="./js/blockchain.js"></script>
   <script defer src="./js/network.js"></script>
+  <script defer src="./js/studio.js"></script>
   <script defer src="./js/main.js"></script>
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-T52THP7H0Z"></script>
@@ -45,6 +46,16 @@
       <a class="text-link" href="../index-jp.html">日本語の紹介ページ →</a>
     </div>
 
+    <details class="experiment-panel" open>
+      <summary>Open and compare recordings</summary>
+      <p>Select <strong>adjacencyMatrix.csv, block.json, and event.json</strong> from one run together. Include <strong>metrics.json</strong> for analysis and <strong>initialAdjacencyMatrix.csv</strong> for network changes. Files are read locally in your browser.</p>
+      <div class="import-grid">
+        <div id="drop_a" class="drop-zone"><label for="files_a"><strong>Recording A · playback</strong><span>Drop files here or choose files</span></label><input id="files_a" type="file" multiple accept=".csv,.json"></div>
+        <div id="drop_b" class="drop-zone"><label for="files_b"><strong>Recording B · comparison</strong><span>Drop files here or choose files</span></label><input id="files_b" type="file" multiple accept=".csv,.json"></div>
+      </div>
+      <p id="import_status" role="status" aria-live="polite">The bundled sample is recording A until you import another run.</p>
+    </details>
+
     <section class="simulation-controls" aria-labelledby="controls-heading">
       <div class="toolbar">
         <div>
@@ -56,6 +67,12 @@
           <button id="pause_button" type="button" class="button secondary" disabled>Pause</button>
           <button id="reset_button" type="button" class="button secondary" disabled>Reset</button>
         </div>
+      </div>
+      <div class="timeline-controls">
+        <label for="timeline">Seek to simulation time (seconds)</label>
+        <input id="timeline" type="range" min="0" max="0" step="any" value="0" disabled aria-describedby="seek_help">
+        <div class="playback-actions"><button id="next_event" type="button" class="button secondary" disabled>Next event time</button><button id="next_block" type="button" class="button secondary" disabled>Next block time</button></div>
+        <small id="seek_help">Seeking and stepping pause playback. All events at the selected time are applied in recorded order.</small>
       </div>
       <details class="settings" id="setting_panel">
         <summary>Playback settings</summary>
@@ -84,13 +101,13 @@
 
     <div class="simulation-meta">
       <p id="timestamp_area">Simulation time: 0 s</p>
-      <p>Recorded sample · Drag to explore, scroll to zoom</p>
+      <p>Recording A · Drag to explore, scroll to zoom</p>
     </div>
     <div id="main_panel" class="visualizations">
       <section class="visualization" aria-labelledby="network-heading">
         <div class="panel-heading"><h2 id="network-heading">Network</h2><span>Block propagation</span></div>
         <div id="network_panel" role="img" aria-label="Network graph showing nodes and connections. During playback, highlighted connections show block propagation."></div>
-        <p class="panel-caption">Dots represent nodes. Highlighted connections show blocks travelling between them.</p>
+        <p class="panel-caption">Dots represent nodes. Each line shows at least one directed connection. Highlighted connections show block propagation; recorded network changes add or remove links.</p>
       </section>
       <section class="visualization" aria-labelledby="blockchain-heading">
         <div class="panel-heading"><h2 id="blockchain-heading">Blockchain</h2><span>Blocks &amp; forks</span></div>
@@ -98,10 +115,63 @@
         <p class="panel-caption">Each box is a block. Arrows connect blocks to their successors; branches reveal forks.</p>
       </section>
     </div>
+    <details class="experiment-panel">
+      <summary>Inspect the current timeline position</summary>
+      <div class="inspector-grid"><div><h3>Latest event</h3><pre id="event_detail">No recording loaded.</pre></div><div><h3>Latest block</h3><pre id="block_detail">No recording loaded.</pre></div></div>
+    </details>
+    <details class="experiment-panel">
+      <summary>Compare recorded results</summary>
+      <p>Metrics describe the entire run, regardless of playback position. Missing metrics are shown as “Not recorded”. Delta is B − A; percentage differences use percentage points (pp). Compare runs with the same observer and settings for a meaningful interpretation.</p>
+      <div class="table-scroll"><table class="metrics-table"><thead><tr><th scope="col">Metric</th><th scope="col">Recording A</th><th scope="col">Recording B</th><th scope="col">Delta B − A</th></tr></thead><tbody>
+        <tr><th scope="row">Nodes</th><td id="metric_nodes_a">Not recorded</td><td id="metric_nodes_b">Not recorded</td><td id="metric_nodes_delta">—</td></tr>
+        <tr><th scope="row">Recorded blocks (including Genesis)</th><td id="metric_blocks_a">Not recorded</td><td id="metric_blocks_b">Not recorded</td><td id="metric_blocks_delta">—</td></tr>
+        <tr><th scope="row">Recorded events</th><td id="metric_events_a">Not recorded</td><td id="metric_events_b">Not recorded</td><td id="metric_events_delta">—</td></tr>
+        <tr><th scope="row">Last recorded time</th><td id="metric_duration_a">Not recorded</td><td id="metric_duration_b">Not recorded</td><td id="metric_duration_delta">—</td></tr>
+        <tr><th scope="row">Observer node</th><td id="metric_observerNode_a">Not recorded</td><td id="metric_observerNode_b">Not recorded</td><td id="metric_observerNode_delta">—</td></tr>
+        <tr><th scope="row">Tracked node</th><td id="metric_attackerNode_a">Not recorded</td><td id="metric_attackerNode_b">Not recorded</td><td id="metric_attackerNode_delta">—</td></tr>
+        <tr><th scope="row">Accepted blocks</th><td id="metric_acceptedBlocks_a">Not recorded</td><td id="metric_acceptedBlocks_b">Not recorded</td><td id="metric_acceptedBlocks_delta">—</td></tr>
+        <tr><th scope="row">Published blocks</th><td id="metric_totalPublishedBlocks_a">Not recorded</td><td id="metric_totalPublishedBlocks_b">Not recorded</td><td id="metric_totalPublishedBlocks_delta">—</td></tr>
+        <tr><th scope="row">Stale fraction</th><td id="metric_staleFraction_a">Not recorded</td><td id="metric_staleFraction_b">Not recorded</td><td id="metric_staleFraction_delta">—</td></tr>
+        <tr><th scope="row">Tracked node revenue share</th><td id="metric_attackerRevenueShare_a">Not recorded</td><td id="metric_attackerRevenueShare_b">Not recorded</td><td id="metric_attackerRevenueShare_delta">—</td></tr>
+        <tr><th scope="row">Fork points</th><td id="metric_forkPoints_a">Not recorded</td><td id="metric_forkPoints_b">Not recorded</td><td id="metric_forkPoints_delta">—</td></tr>
+        <tr><th scope="row">Reorganizations</th><td id="metric_reorgCount_a">Not recorded</td><td id="metric_reorgCount_b">Not recorded</td><td id="metric_reorgCount_delta">—</td></tr>
+        <tr><th scope="row">Maximum reorganization depth</th><td id="metric_maxReorgDepth_a">Not recorded</td><td id="metric_maxReorgDepth_b">Not recorded</td><td id="metric_maxReorgDepth_delta">—</td></tr>
+        <tr><th scope="row">Mean propagation delay</th><td id="metric_meanPropagationDelay_a">Not recorded</td><td id="metric_meanPropagationDelay_b">Not recorded</td><td id="metric_meanPropagationDelay_delta">—</td></tr>
+        <tr><th scope="row">Attack successes</th><td id="metric_attackSuccesses_a">Not recorded</td><td id="metric_attackSuccesses_b">Not recorded</td><td id="metric_attackSuccesses_delta">—</td></tr>
+        <tr><th scope="row">Attack failures</th><td id="metric_attackFailures_a">Not recorded</td><td id="metric_attackFailures_b">Not recorded</td><td id="metric_attackFailures_delta">—</td></tr>
+        <tr><th scope="row">Attack success rate</th><td id="metric_attackSuccessRate_a">Not recorded</td><td id="metric_attackSuccessRate_b">Not recorded</td><td id="metric_attackSuccessRate_delta">—</td></tr>
+        <tr><th scope="row">Transactions confirmed</th><td id="metric_transactionsConfirmed_a">Not recorded</td><td id="metric_transactionsConfirmed_b">Not recorded</td><td id="metric_transactionsConfirmed_delta">—</td></tr>
+      </tbody></table></div>
+      <button id="clear_comparison" type="button" class="button secondary" disabled>Clear recording B</button>
+      <p class="settings-help">The tracked node is configured by metrics.attackerNode, including honest baselines. Published and accepted blocks exclude Genesis. Attack success is scenario-specific; no trials produces no success rate. See the simulation guide for metric definitions.</p>
+    </details>
+    <details class="experiment-panel">
+      <summary>Build an experiment configuration</summary>
+      <p>Export a PoW configuration for the BCASim command line. Honest nodes have equal weight; attack scenarios put the attacker at node 0 and split the remaining weight equally. Transaction generation is off.</p>
+      <form id="config_form">
+        <div class="config-grid">
+          <div class="field"><label for="config_nodes">Nodes (1–200)</label><input id="config_nodes" type="number" min="1" max="200" step="1" value="10" required></div>
+          <div class="field"><label for="config_scenario">Scenario</label><select id="config_scenario"><option value="honest">Honest mining</option><option value="selfish">Selfish mining</option><option value="double-spend">Double spending</option></select></div>
+          <div class="field"><label for="config_seed">Seed (64-bit integer)</label><input id="config_seed" type="text" inputmode="numeric" value="1" required></div>
+          <div class="field"><label for="config_duration">Duration (seconds)</label><input id="config_duration" type="number" min="0" step="any" value="1000" required></div>
+          <div class="field"><label for="config_interval">Block interval (seconds)</label><input id="config_interval" type="number" min="0.000001" step="any" value="10" required></div>
+          <div class="field"><label for="config_share">Attacker weight share (0–1)</label><input id="config_share" type="number" min="0" max="1" step="any" value="0.3" required><small>Used by attack scenarios only.</small></div>
+          <div class="field"><label for="config_delay">Block delay (seconds)</label><input id="config_delay" type="number" min="0" step="any" value="0" required></div>
+          <div class="field"><label for="config_topology">Network topology</label><select id="config_topology"><option value="mesh">Fully connected</option><option value="ring">Bidirectional ring</option></select></div>
+        </div>
+        <button class="button primary" type="submit">Generate configuration</button>
+        <a id="config_download" class="button secondary" download="experiment.properties" hidden>Download experiment.properties</a>
+      </form>
+      <p id="config_status" role="status" aria-live="polite">Choose settings, generate, then download the configuration.</p>
+      <details><summary>Configuration preview</summary><pre id="config_preview"></pre></details>
+      <p>Move the download into your BCASim directory, then run:</p>
+      <pre class="command">java -jar target/bcasim-0.0.1-SNAPSHOT.jar --config experiment.properties --output runs/my-experiment</pre>
+      <p>Import the resulting files above. Use a new output directory for every run.</p>
+    </details>
     <noscript><p class="notice">This interactive demo requires JavaScript. You can <a href="../network.gif">watch the recorded animation</a> instead.</p></noscript>
     <aside class="demo-note">
       <h2>Build your own experiment</h2>
-      <p>This demo replays bundled results. To change network parameters or attack scenarios, run BCASim and open the results in the visualization tool.</p>
+      <p>Generate a configuration above, run BCASim, then select the files from that run to explore or compare results here.</p>
       <a class="text-link" href="https://github.com/bcasim/bcasim/blob/main/docs/english/doc.md">Read the simulation guide →</a>
     </aside>
   </main>

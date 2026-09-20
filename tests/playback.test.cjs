@@ -79,3 +79,28 @@ test('fractional steps clamp to duration and repeated completed ticks are inert'
     assert.equal(h.player.eventIndex, 2);
     assert.equal(h.calls.filter(call => call[0] === 'event').length, 2);
 });
+
+test('seeking and stepping pause, reconstruct prior events, group equal timestamps, and allow rewind after completion', () => {
+    const data = recording();
+    data.events.push({ ...data.events[1], node: 0 });
+    const h = harness(data);
+    h.player.start({ time: 0, speed: 1, color: '1' });
+    h.player.step('block');
+    assert.equal(h.player.time, 1);
+    assert.equal(h.player.state, 'paused');
+    assert.equal(h.timers.size, 0);
+    assert.equal(h.player.blockIndex, 2);
+    assert.equal(h.player.eventIndex, 1);
+    h.player.step('event');
+    assert.equal(h.player.eventIndex, 3);
+    assert.equal(h.player.state, 'completed');
+    h.player.seek(0.5);
+    assert.equal(h.player.state, 'paused');
+    assert.equal(h.player.blockIndex, 1);
+    assert.equal(h.player.eventIndex, 0);
+    h.player.resume();
+    assert.equal(h.timers.size, 2);
+    assert.throws(() => h.player.seek(NaN), /Invalid seek/);
+    assert.equal(h.player.state, 'running');
+    assert.throws(() => h.player.step('bogus'), /Step kind/);
+});

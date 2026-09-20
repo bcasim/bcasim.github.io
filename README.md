@@ -45,6 +45,25 @@ announces loading, playback state, and errors. Text below each graph explains
 its visual encoding. The recorded animation remains available from the homepage
 and demo footer.
 
+## Local results and experiment setup
+
+**Open and compare recordings** accepts a local selection or drop of
+`adjacencyMatrix.csv`, `block.json` and `event.json` from one run. Include
+`metrics.json` for recorded metrics; runs with connection changes also require
+`initialAdjacencyMatrix.csv`. Files stay in the browser. A failed import preserves
+the previous recording. Recording A drives playback, and Recording B supplies
+comparison metrics. The timeline slider and next-event/next-block controls seek to
+recorded timestamps, and the inspector exposes the latest event/block details.
+
+**Build an experiment configuration** exports a validated `.properties` file.
+Execute the shown Java command in a BCASim checkout, then import the resulting
+files. The static website does not execute Java. The builder uses PoW, with
+transaction generation disabled; advanced settings are in the simulator guide.
+
+日本語：**Open and compare recordings**で、同じ実験の`adjacencyMatrix.csv`・`block.json`・`event.json`をまとめて選択・ドロップします。指標には`metrics.json`、接続変更がある場合は`initialAdjacencyMatrix.csv`も含めてください。Aを再生し、Bと最終指標を比較します。時刻スライダー・ステップ操作・詳細表示を利用できます。設定作成画面では`.properties`ファイルを保存し、Javaで実行した結果を読み戻します。
+
+操作の詳細は[可視化ツールの日本語ガイド](https://github.com/bcasim/bcasim-visualization/blob/main/README_JP.md)、設定と指標の定義は[シミュレータの日本語ガイド](https://github.com/bcasim/bcasim/blob/main/docs/japanese/doc.md)を参照してください。
+
 ## Updating the shared runtime
 
 The canonical source is the separate `bcasim-visualization` repository. Change
@@ -74,7 +93,8 @@ node --test
 
 Before publishing, preview both homepages and the demo at desktop and mobile
 widths. Check language navigation, keyboard access to the command block, loading,
-start/pause/resume/reset, invalid settings, and playback completion.
+start/pause/resume/reset, seek/step, local imports and import errors, comparison,
+configuration download, invalid settings and playback completion.
 
 Changes are served as static files by GitHub Pages. Keep the English and
 Japanese homepage content in sync when updating project links or setup commands.

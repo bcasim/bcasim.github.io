@@ -21,10 +21,10 @@ test('vendored runtime and regression tests match the canonical manifest', () =>
 test('each independently served page loads the shared runtime in dependency order and exposes its controls', () => {
     const html = fs.readFileSync(path.join(assets, 'index.html'), 'utf8');
     const scripts = Array.from(html.matchAll(/<script defer src="(\.\/js\/[^" ]+)"/g), match => match[1]);
-    assert.deepEqual(scripts, ['./js/dist/vis.js', './js/read-file.js', './js/playback.js', './js/blockchain.js', './js/network.js', './js/main.js']);
+    assert.deepEqual(scripts, ['./js/dist/vis.js', './js/read-file.js', './js/playback.js', './js/blockchain.js', './js/network.js', './js/studio.js', './js/main.js']);
     scripts.forEach(script => assert.ok(fs.existsSync(path.join(assets, script)), 'Runtime asset must exist locally: ' + script));
     for (const id of ['start_button', 'pause_button', 'reset_button', 'status_message', 'timestamp_area',
-        'setting_panel', 'speed', 'start_point', 'node', 'network_panel', 'blockchain_panel']) {
+        'files_a', 'files_b', 'timeline', 'next_event', 'next_block', 'config_form', 'config_download', 'event_detail', 'setting_panel', 'speed', 'start_point', 'node', 'network_panel', 'blockchain_panel']) {
         assert.match(html, new RegExp('id="' + id + '"'), 'Missing control: ' + id);
     }
     assert.doesNotMatch(html, /onclick=/, 'Controls use the shared controller rather than inline handlers.');

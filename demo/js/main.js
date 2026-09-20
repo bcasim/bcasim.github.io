@@ -13,6 +13,10 @@
         this.data = null;
         this.playback = null;
         this.renderer = null;
+        this.importGeneration = 0;
+        this.comparisonGeneration = 0;
+        this.comparisonData = null;
+        this.studio = root.BCASimStudio ? new root.BCASimStudio(this) : null;
     }
     Demo.prototype.element = function (id) { return this.document.getElementById(id); };
     Demo.prototype.status = function (message, invalid) {
@@ -47,6 +51,7 @@
         };
         this.status(messages[this.state]);
         this.controls();
+        if (this.studio) this.studio.changed(playback);
     };
     Demo.prototype.settings = function () {
         var speedInput = this.element("speed");
@@ -90,6 +95,39 @@
     Demo.prototype.reset = function () {
         if (this.state !== "loading" && this.state !== "error") this.playback.reset();
     };
+    Demo.prototype.useData = function (data) {
+        // The caller has parsed every file successfully before stopping the previous recording.
+        if (this.playback) this.playback.dispose();
+        this.data = data;
+        this.renderer = new root.BCASimRenderer(this.vis, this.element("network_panel"), this.element("blockchain_panel"));
+        var self = this;
+        this.playback = new root.BCASimPlayback(data, this.renderer, this.scheduler, function (playback) { self.changed(playback); });
+        this.element("start_point").max = String(data.duration);
+        this.element("start_point").value = "0";
+        this.playback.reset();
+        if (this.studio) this.studio.renderComparison();
+    };
+    Demo.prototype.importFiles = async function (files, compare) {
+        var generationKey = compare ? "comparisonGeneration" : "importGeneration";
+        var ticket = ++this[generationKey];
+        var message = this.element("import_status");
+        message.textContent = "Reading local recording…";
+        try {
+            var data = await root.BCASimData.fromFiles(files);
+            if (this.initialization) await this.initialization;
+            if (ticket !== this[generationKey]) return false;
+            if (compare) {
+                this.comparisonData = data;
+                if (this.studio) this.studio.renderComparison();
+            } else this.useData(data);
+            message.textContent = (compare ? "Comparison B" : "Recording A") + " loaded locally: " + data.matrix.length + " nodes, " + data.events.length + " events. " +
+                (data.metrics ? "Recorded metrics included." : "No metrics.json selected; unrecorded metrics are marked unavailable.");
+            return true;
+        } catch (error) {
+            if (ticket === this[generationKey]) message.textContent = "Import failed. " + error.message + " The previous recording is unchanged.";
+            return false;
+        }
+    };
     Demo.prototype.init = function () {
         if (this.initialization) return this.initialization;
         if (this.data) return Promise.resolve(true);
@@ -102,17 +140,14 @@
                 // A restored back/forward cache entry remains paused and resumable.
                 if (self.playback) self.playback.pause();
             });
+            if (this.studio) this.studio.bind();
             this.controlsBound = true;
         }
         this.state = "loading";
         this.status("Loading simulation data…");
         this.controls();
         this.initialization = root.BCASimData.load(this.fetchFile).then(function (data) {
-            self.data = data;
-            self.renderer = new root.BCASimRenderer(self.vis, self.element("network_panel"), self.element("blockchain_panel"));
-            self.playback = new root.BCASimPlayback(data, self.renderer, self.scheduler, function (playback) { self.changed(playback); });
-            self.element("start_point").max = String(data.duration);
-            self.playback.reset();
+            self.useData(data);
             return true;
         }).catch(function (error) {
             if (self.playback) self.playback.dispose();

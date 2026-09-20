@@ -32,7 +32,7 @@ function harness(files = fixture, deferred = false) {
         elements.set(id, item);
         return item;
     }
-    ['start_button', 'pause_button', 'reset_button', 'status_message', 'timestamp_area', 'setting_panel', 'network_panel', 'blockchain_panel'].forEach(id => element(id));
+    ['start_button', 'pause_button', 'reset_button', 'status_message', 'timestamp_area', 'setting_panel', 'network_panel', 'blockchain_panel', 'import_status'].forEach(id => element(id));
     element('speed', '2');
     element('start_point', '0');
     const radios = [element('color-block', '1'), element('color-miner', '2')];
@@ -57,6 +57,7 @@ function harness(files = fixture, deferred = false) {
             }
         }
         get(id) { return this.items.get(id); }
+        remove(id) { this.items.delete(id); }
         clear() { this.items.clear(); }
         get length() { return this.items.size; }
     }
@@ -84,7 +85,7 @@ function harness(files = fixture, deferred = false) {
             return new Promise((resolve, reject) => {
                 const request = {
                     name, reject,
-                    resolve(status = 200) {
+                    resolve(status = Object.hasOwn(files, name) ? 200 : 404) {
                         resolve({ ok: status === 200, status,
                             text: async () => files[name],
                             json: async () => JSON.parse(JSON.stringify(files[name]))
@@ -118,9 +119,10 @@ test('all three files must finish before playback becomes available', async () =
     assert.equal(h.ctx.demo.init(), initializing, 'Concurrent initialization shares a promise');
     assert.equal(h.elements.get('start_button').disabled, true);
     assert.equal(h.ctx.demo.start(), false);
-    assert.equal(h.requests.length, 3);
+    assert.equal(h.requests.length, 5);
     h.requests.find(r => r.name === 'block.json').resolve();
     h.requests.find(r => r.name === 'event.json').resolve();
+    h.requests.filter(r => /metrics|initialAdjacency/.test(r.name)).forEach(r => r.resolve());
     await new Promise(resolve => setImmediate(resolve));
     assert.equal(h.ctx.demo.data, null, 'Publish the dataset atomically');
     assert.equal(h.liveNetworks(), 0);
@@ -138,14 +140,14 @@ test('HTTP failures expose Retry loading and a retry does not duplicate listener
     const initializing = h.ctx.demo.init();
     h.requests[0].resolve(404);
     h.requests[1].resolve();
-    h.requests[2].resolve();
+    h.requests.slice(2).forEach(request => request.resolve());
     assert.equal(await initializing, false);
     assert.equal(h.ctx.demo.state, 'error');
     assert.match(h.elements.get('status_message').textContent, /HTTP 404/);
     assert.equal(h.elements.get('start_button').textContent, 'Retry loading');
     assert.equal(h.elements.get('start_button').disabled, false);
     const retry = h.ctx.demo.start();
-    h.requests.slice(3).forEach(request => request.resolve());
+    h.requests.slice(5).forEach(request => request.resolve());
     assert.equal(await retry, true);
     assert.equal(h.elements.get('start_button').listeners.click.length, 1);
     assert.equal(h.liveNetworks(), 2);
@@ -367,7 +369,85 @@ test('loading twice after readiness reuses the recording without leaking graph i
     const h = await ready();
     const renderer = h.ctx.demo.renderer;
     assert.equal(await h.ctx.demo.init(), true);
-    assert.equal(h.requests.length, 3);
+    assert.equal(h.requests.length, 5);
     assert.equal(h.ctx.demo.renderer, renderer);
     assert.equal(h.liveNetworks(), 2);
+});
+
+function localFiles(files = fixture) {
+    return Object.entries(files).map(([name, data]) => ({ name, text: async () => typeof data === 'string' ? data : JSON.stringify(data) }));
+}
+
+test('invalid local imports preserve the running recording, clocks, graph and comparison', async () => {
+    const h = await ready();
+    h.ctx.demo.start(); h.tick();
+    const player = h.ctx.demo.playback, graph = h.ctx.demo.renderer, timers = [...h.timers.keys()];
+    assert.equal(await h.ctx.demo.importFiles(localFiles({ ...fixture, 'event.json': '{broken' })), false);
+    assert.equal(h.ctx.demo.playback, player);
+    assert.equal(h.ctx.demo.renderer, graph);
+    assert.equal(player.time, 2);
+    assert.equal(player.state, 'running');
+    assert.deepEqual([...h.timers.keys()], timers);
+    assert.match(h.elements.get('import_status').textContent, /previous recording is unchanged/);
+    assert.equal(await h.ctx.demo.importFiles(localFiles().slice(0, 1)), false);
+    assert.equal(h.liveNetworks(), 2);
+});
+
+test('valid local imports replace all data and dispose previous clocks exactly once after parsing', async () => {
+    const h = await ready();
+    h.ctx.demo.start(); h.tick();
+    const old = h.ctx.demo.playback;
+    let resolve;
+    const files = localFiles();
+    files[0].text = () => new Promise(done => { resolve = done; });
+    const importing = h.ctx.demo.importFiles(files);
+    assert.equal(old.state, 'running');
+    assert.equal(h.timers.size, 2);
+    resolve(fixture['adjacencyMatrix.csv']);
+    assert.equal(await importing, true);
+    assert.equal(old.state, 'disposed');
+    assert.equal(h.ctx.demo.state, 'ready');
+    assert.equal(h.ctx.demo.playback.time, 0);
+    assert.equal(h.liveNetworks(), 2);
+    assert.equal(h.timers.size, 0);
+});
+
+test('a newer import supersedes a slower import and comparison does not interrupt playback', async () => {
+    const h = await ready();
+    let resolve;
+    const slow = localFiles();
+    slow[0].text = () => new Promise(done => { resolve = done; });
+    const first = h.ctx.demo.importFiles(slow);
+    assert.equal(await h.ctx.demo.importFiles(localFiles({ ...fixture, 'block.json': [] })), true);
+    resolve(fixture['adjacencyMatrix.csv']);
+    assert.equal(await first, false);
+    assert.equal(h.ctx.demo.data.blocks.length, 0);
+    h.ctx.demo.start(); h.tick();
+    const old = h.ctx.demo.playback;
+    assert.equal(await h.ctx.demo.importFiles(localFiles({ ...fixture, 'metrics.json': { acceptedBlocks: 3 } }), true), true);
+    assert.equal(h.ctx.demo.playback, old);
+    assert.equal(old.state, 'running');
+    assert.equal(h.ctx.demo.comparisonData.metrics.acceptedBlocks, 3);
+    assert.equal(h.timers.size, 2);
+});
+
+test('network changes replay directed links from the initial topology and seek reconstructs them', async () => {
+    const h = await ready({ ...fixture, 'adjacencyMatrix.csv': '0,0\n0,0', 'initialAdjacencyMatrix.csv': '0,1\n1,0',
+        'event.json': [
+            { type: 'NetworkChange', from: 0, to: 1, time: 1, action: 'disconnect' },
+            { type: 'NetworkChange', from: 1, to: 0, time: 2, action: 'disconnect' },
+            { type: 'NetworkChange', from: 0, to: 1, time: 3, action: 'connect' },
+            { type: 'NetworkChange', from: 0, to: 1, time: 4, action: 'disconnect' }
+        ] });
+    assert.equal(h.ctx.demo.renderer.edges.length, 1);
+    h.ctx.demo.playback.seek(1);
+    assert.equal(h.ctx.demo.renderer.edges.length, 1, 'Reverse direction is still connected');
+    h.ctx.demo.playback.seek(2);
+    assert.equal(h.ctx.demo.renderer.edges.length, 0);
+    h.ctx.demo.playback.step('event');
+    assert.equal(h.ctx.demo.renderer.edges.length, 1);
+    h.ctx.demo.playback.seek(4);
+    assert.equal(h.ctx.demo.renderer.edges.length, 0);
+    h.ctx.demo.playback.seek(0);
+    assert.equal(h.ctx.demo.renderer.edges.length, 1);
 });
