@@ -13,6 +13,14 @@
   <script defer src="./js/blockchain.js"></script>
   <script defer src="./js/network.js"></script>
   <script defer src="./js/main.js"></script>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-T52THP7H0Z"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-T52THP7H0Z');
+  </script>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to simulation controls</a>
@@ -97,7 +105,7 @@
     </aside>
   </main>
   <footer class="container">
-    <p><strong>BCASim</strong><br>Open-source tools for blockchain attack analysis</p>
+    <p><img class="footer-logo" src="../logo.png" alt="BCASim" width="318" height="75">Open-source tools for blockchain attack analysis</p>
     <p><a href="../index.html">Back to home</a> · <a href="../network.gif">Recorded animation</a></p>
   </footer>
 </body>
