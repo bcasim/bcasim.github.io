@@ -28,8 +28,8 @@
 
 .simulation-controls {
   border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #fff;
+  border-radius: 2px;
+  background: var(--surface);
 }
 
 .toolbar {
@@ -44,6 +44,7 @@
 .panel-heading h2,
 .demo-note h2 {
   font-size: 19px;
+  font-weight: 500;
   margin: 0;
 }
 
@@ -85,12 +86,13 @@ button:disabled {
 button:focus-visible,
 summary:focus-visible,
 input:focus-visible {
-  outline: 3px solid #bd581d;
+  outline: 3px solid var(--focus);
   outline-offset: 4px;
 }
 
 .settings {
   border-top: 1px solid var(--line);
+  background: var(--paper);
 }
 
 .settings summary {
@@ -147,10 +149,10 @@ input[type="number"] {
   width: 100%;
   min-width: 0;
   padding: 9px 12px;
-  background: var(--paper);
+  background: var(--surface);
   color: var(--ink);
-  border: 1px solid #adbec1;
-  border-radius: 5px;
+  border: 1px solid var(--muted);
+  border-radius: 2px;
 }
 
 .field small {
@@ -194,9 +196,9 @@ input[type="number"] {
 }
 
 .visualization {
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 0;
   overflow: hidden;
   min-width: 0;
 }
@@ -208,6 +210,7 @@ input[type="number"] {
   gap: 12px;
   padding: 14px 18px;
   border-bottom: 1px solid var(--line);
+  background: var(--paper);
 }
 
 .panel-heading span {
@@ -219,7 +222,7 @@ input[type="number"] {
 #blockchain_panel {
   width: 100%;
   height: 480px;
-  background: #fbfcfd;
+  background: var(--surface);
 }
 
 .panel-caption {
@@ -232,6 +235,8 @@ input[type="number"] {
 
 .demo-note {
   margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
   max-width: 760px;
 }
 
